@@ -13,54 +13,60 @@
 #define SCREENHEIGHT    600
 
 
-typedef struct playerpad {
-    int position;
-    int size;
-    int speed;
+typedef struct playerpad {  // Defaults 
+    int position;           // SCREEN.vcenter
+    int size;               // SCREENHEIGHT/16
+    int speed;              // SCREENHEIGHT/80
+    ALLEGRO_COLOR color;    // White
 } PLAYERPAD;
 
 
 typedef struct player {
-    int score;
+    int  score;             // 0
+    char scorestr[3];       // sprintf(scorestr, "%d", score)
     PLAYERPAD pad;
 } PLAYER;
 
 
 typedef struct ball {
-    int position_x;
+    int position_x;        
     int position_y;
     int next_position_x;
     int next_position_y;
-    int initial_speed_x;
-    int initial_speed_y;
+    int initial_speed_x;    // SCREENWIDTH/160
+    int initial_speed_y;    // SCREENHEIGHT/120
     int speed_x;
     int speed_y;
-    bool ingame;
+    bool ingame;            // False
+    ALLEGRO_COLOR color;    // white
 } BALL;
 
 
 typedef struct screen {
-    int width;
-    int height;
-    int border;
-    int hcenter;
-    int vcenter;
-    ALLEGRO_COLOR color;
+    int width;              // 800
+    int height;             // 600
+    int border;             // SCREENHEIGHT/75
+    int hcenter;            // SCREENWIDTH/2
+    int vcenter;            // SCREENHEIGHT/2
+    int bot_limit;          // SCREENHEIGHT-border
+    int top_limit;          // border
+    ALLEGRO_COLOR foreground;
+    ALLEGRO_COLOR background;
 } SCREEN;
 
 
 void draw_arena(SCREEN *sc) {
     /*
-     * Draw the pong arena of size width and height with color
+     * Draw the pong arena based on SCREEN attributes, all WxH dependant
      **/
     al_draw_filled_rectangle( 0, 0, sc.width, sc.border, sc.color);
-    al_draw_filled_rectangle( 0, sc.height-sc.border, sc.width, sc.height, sc.color);
+    al_draw_filled_rectangle( 0, sc.height-sc.border, sc.width, sc.height, sc.foreground);
     
-    int r, nmax=15;
+    int dot, numdots=15;
 
-    for(int n = 0; n<nmax; n++) {
-        r=n*(sc.height/nmax)+sc.border/2
-        al_draw_filled_rectangle((sc.width-sc.border)/2, r, (sc.width+sc.border)/2, r+sc.border, sc.color);
+    for(int i = 0; i<numdots; i++) {
+        dot = i*(sc.height/numdots)+sc.border/2
+        al_draw_filled_rectangle((sc.width-sc.border)/2, dot, (sc.width+sc.border)/2, dot+sc.border, sc.foreground);
     }
 }
 
@@ -85,16 +91,6 @@ int main(int argc, char *argv[]) {
     /* The Players */
     PLAYER p1;
     PLAYER p2;
-
-    int bot_limit, top_limit;
-    /* Pong arena attributes */
-    int bar_size = 50;
-    int p1_pos;
-    int p2_pos;
-    int p1_score = 0;
-    int p2_score = 0;
-    char p1_score_str[3];
-    char p2_score_str[3];
 
     /* Loop status */
     bool done = false;
