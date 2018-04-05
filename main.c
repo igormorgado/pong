@@ -231,7 +231,6 @@ int main(int argc, char *argv[]) {
 
             /* Check colision against border */
             if ( next_ball_pos_y > top_limit && next_ball_pos_y < bot_limit) {
-                printf("YHERE\n");
                 ball_pos_y = next_ball_pos_y; 
             } else if (next_ball_pos_y < top_limit) {
                 ball_pos_y = top_limit;
@@ -243,11 +242,11 @@ int main(int argc, char *argv[]) {
 
             /* In fact here should score a point */
             if ( next_ball_pos_x >= border && next_ball_pos_x <= screen_width-border ) {
-                printf("XERE\n");
                 ball_pos_x = next_ball_pos_x; 
             } else if (next_ball_pos_x < border) {
                 /* Check if the pad1 is there */
-                if ( next_ball_pos_y <= p1_pos + bar_size && next_ball_pos_y >= p1_pos - bar_size) {
+                if (( next_ball_pos_y <= p1_pos + bar_size && next_ball_pos_y >= p1_pos - bar_size) || 
+                   ( ball_pos_y <= p1_pos + bar_size && ball_pos_y >= p1_pos - bar_size)) {
                     ball_speed_x *= -1;
                     ball_pos_x = 2*border;
                 } else {
@@ -259,7 +258,8 @@ int main(int argc, char *argv[]) {
 
             } else if (next_ball_pos_x > screen_width-border) {
                 /* Check if the pad2 is there */
-                if ( next_ball_pos_y <= p2_pos + bar_size && next_ball_pos_y >= p2_pos - bar_size) {
+                if (( next_ball_pos_y <= p2_pos + bar_size && next_ball_pos_y >= p2_pos - bar_size) || 
+                   ( ball_pos_y <= p2_pos + bar_size && ball_pos_y >= p2_pos - bar_size)) {
                     ball_speed_x *= -1;
                     ball_pos_x = screen_width - 2*border;
                 } else {

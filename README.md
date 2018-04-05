@@ -36,8 +36,11 @@ This code is completely GNU/GPLv2
 TODO
 ====
 
-Ball "physics"
-Scores
+enchance timers and collision detection
+
+input is laggy with the ball timer, fix that
+
+rewrite code completely
 
 Thanks
 =====
@@ -49,5 +52,7 @@ Thanks
 +Abi12
 
 +dos1
+
++SiegeLord
 
 From #allegro @ freenode
