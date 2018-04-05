@@ -9,11 +9,8 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define SCREENWIDTH 800
-#define SCREENHEIGHT 600
-
-#define BORDER 16
-#define PADSIZE 26
+#define SCREENWIDTH     800
+#define SCREENHEIGHT    600
 
 
 typedef struct playerpad {
@@ -21,6 +18,12 @@ typedef struct playerpad {
     int size;
     int speed;
 } PLAYERPAD;
+
+
+typedef struct player {
+    int score;
+    PLAYERPAD pad;
+} PLAYER;
 
 
 typedef struct ball {
@@ -36,25 +39,34 @@ typedef struct ball {
 } BALL;
 
 
+typedef struct screen {
+    int width;
+    int height;
+    int border;
+    int hcenter;
+    int vcenter;
+    ALLEGRO_COLOR color;
+} SCREEN;
 
-void draw_arena(int width, int height, ALLEGRO_COLOR color ) {
+
+void draw_arena(SCREEN *sc) {
     /*
      * Draw the pong arena of size width and height with color
      **/
-    int center_offset = BORDER/2;
-
-    al_draw_filled_rectangle( 0, 0,  width, BORDER, color);
-    al_draw_filled_rectangle( 0, height-BORDER, width, height, color);
+    al_draw_filled_rectangle( 0, 0, sc.width, sc.border, sc.color);
+    al_draw_filled_rectangle( 0, sc.height-sc.border, sc.width, sc.height, sc.color);
     
     int r, nmax=15;
 
     for(int n = 0; n<nmax; n++) {
-        r=n*(height/nmax)+center_offset;
-        al_draw_filled_rectangle((width-BORDER)/2, r, (width+BORDER)/2, r+BORDER, color);
+        r=n*(sc.height/nmax)+sc.border/2
+        al_draw_filled_rectangle((sc.width-sc.border)/2, r, (sc.width+sc.border)/2, r+sc.border, sc.color);
     }
 }
 
+
 void draw_player_pad(PLAYERPAD pad) {
+
 }
 
 int main(int argc, char *argv[]) {
@@ -64,20 +76,15 @@ int main(int argc, char *argv[]) {
     const int FPS = 60;
     const double dt = 1.0/FPS;
 
-    /* Screen attributes */
-    int screen_width, screen_height;
-    int horz_center, vert_center;
+    /* Reference to all screen stuff */
+    SCREEN sc;
 
-    /* Ball attributes */
-    int ball_pos_x, ball_pos_y;
-    int next_ball_pos_x, next_ball_pos_y;
-    bool ball_ingame = false;
-    int ball_direction;
-    const int initial_ball_speed_x = 4;
-    const int initial_ball_speed_y = 8;
-    int ball_speed_x;
-    int ball_speed_y;
+    /* The ball */
+    BALL ball;
 
+    /* The Players */
+    PLAYER p1;
+    PLAYER p2;
 
     int bot_limit, top_limit;
     /* Pong arena attributes */
