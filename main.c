@@ -7,11 +7,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <time.h>
 
 #define SCREENWIDTH 800
 #define SCREENHEIGHT 600
 
 int main(int argc, char *argv[]) {
+
+    srand(time(NULL));
 
     const int FPS = 60;
     const double dt = 1.0/FPS;
@@ -25,12 +28,15 @@ int main(int argc, char *argv[]) {
     int screen_width, screen_height;
     int horz_center, vert_center;
 
-
-    /* Simulation parameters */
-    double ispeed = 100., jspeed = 100.;
-    double istep = 0, jstep = 0.;
-    double imult = 1.0, jmult = 1.;
-    double i, j;
+    /* Ball attributes */
+    int ball_pos_x, ball_pos_y;
+    int next_ball_pos_x, next_ball_pos_y;
+    bool ball_ingame = false;
+    int ball_direction;
+    const int initial_ball_speed_x = 4;
+    const int initial_ball_speed_y = 8;
+    int ball_speed_x;
+    int ball_speed_y;
 
     /* Pong arena attributes */
     int border = 16;            // must be even
@@ -40,14 +46,13 @@ int main(int argc, char *argv[]) {
     int bar_size = 25;
     int bot_limit, top_limit;
     int p1_score = 0;
-    int p2_score = 2;
-    char p1_score_str[2];
-    char p2_score_str[2];
+    int p2_score = 0;
+    char p1_score_str[3];
+    char p2_score_str[3];
 
     /* Loop status */
     bool done = false;
     bool draw = true;
-    int state = 0;
 
 
     if(!al_init()) {
@@ -103,10 +108,12 @@ int main(int argc, char *argv[]) {
     ALLEGRO_FONT *terminusbold = al_load_font("terminusbold.ttf", 80, 0);
 
     ALLEGRO_COLOR white      = al_map_rgb(255, 255, 255);
+    ALLEGRO_COLOR grey       = al_map_rgb(255, 200, 200);
     ALLEGRO_COLOR background = al_map_rgb(0, 0, 0);
 
     ALLEGRO_EVENT events;
-    ALLEGRO_TIMER *timer = al_create_timer(dt);
+    ALLEGRO_TIMER *timer     = al_create_timer(dt);
+    ALLEGRO_TIMER *balltimer = al_create_timer(dt);
     ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
     ALLEGRO_KEYBOARD_STATE keystate;
 
@@ -120,6 +127,18 @@ int main(int argc, char *argv[]) {
     al_start_timer(timer);
     while(!done) {
         
+        if(!ball_ingame) {
+            /* Ball start in middle of screen */
+            ball_pos_x = horz_center;
+            ball_pos_y = vert_center;
+
+            ball_direction = rand() % 2 ? 1:-1;
+            ball_speed_x = ball_direction*initial_ball_speed_x;
+
+            ball_direction = rand() % 2 ? 1:-1;
+            ball_speed_y = ball_direction*initial_ball_speed_y;
+        }
+
         if(draw) {
             
             al_clear_to_color(background);
@@ -146,6 +165,13 @@ int main(int argc, char *argv[]) {
 
             /* Pong player 2 */
             al_draw_filled_rectangle( 800-2*border, p2_pos-bar_size, 800-border, p2_pos+bar_size, white);
+            
+            /* The "ball" */
+            al_draw_filled_rectangle( ball_pos_x - border/2,
+                                      ball_pos_y - border/2,
+                                      ball_pos_x + border/2,
+                                      ball_pos_y + border/2,
+                                      grey);
 
             al_flip_display();
 
@@ -158,8 +184,11 @@ int main(int argc, char *argv[]) {
         {
             switch(events.keyboard.keycode)
             {
-                case  ALLEGRO_KEY_ESCAPE:
+                case ALLEGRO_KEY_ESCAPE:
                     done = true;
+                    break;
+                case ALLEGRO_KEY_SPACE:
+                    ball_ingame = true;
                     break;
             }
         }
@@ -179,10 +208,14 @@ int main(int argc, char *argv[]) {
         if(events.type == ALLEGRO_EVENT_TIMER)
         {
             al_get_keyboard_state(&keystate);
+            
+            /* Player 2 keys */
             if(al_key_down(&keystate, ALLEGRO_KEY_DOWN) && p2_pos < bot_limit)
                 p2_pos += bar_speed;
             else if(al_key_down(&keystate, ALLEGRO_KEY_UP) && p2_pos > top_limit)
                 p2_pos -= bar_speed;
+
+            /* Playe 1 keys */
             if(al_key_down(&keystate, ALLEGRO_KEY_S) && p1_pos < bot_limit)
                 p1_pos += bar_speed;
             else if(al_key_down(&keystate, ALLEGRO_KEY_W) && p1_pos > top_limit)
@@ -190,6 +223,60 @@ int main(int argc, char *argv[]) {
 
             draw = true;
         }
+
+        if(ball_ingame) {
+
+            next_ball_pos_x = ball_pos_x + ball_speed_x;
+            next_ball_pos_y = ball_pos_y + ball_speed_y;
+
+            /* Check colision against border */
+            if ( next_ball_pos_y > top_limit && next_ball_pos_y < bot_limit) {
+                printf("YHERE\n");
+                ball_pos_y = next_ball_pos_y; 
+            } else if (next_ball_pos_y < top_limit) {
+                ball_pos_y = top_limit;
+                ball_speed_y *= -1;
+            } else if (next_ball_pos_y > bot_limit) {
+                ball_pos_y = bot_limit;
+                ball_speed_y *= -1;
+            }
+
+            /* In fact here should score a point */
+            if ( next_ball_pos_x >= border && next_ball_pos_x <= screen_width-border ) {
+                printf("XERE\n");
+                ball_pos_x = next_ball_pos_x; 
+            } else if (next_ball_pos_x < border) {
+                /* Check if the pad1 is there */
+                if ( next_ball_pos_y <= p1_pos + bar_size && next_ball_pos_y >= p1_pos - bar_size) {
+                    ball_speed_x *= -1;
+                    ball_pos_x = 2*border;
+                } else {
+                    /* Otherwise scores p2 */
+                    p2_score++;
+                    sprintf(p2_score_str,"%d", p2_score);
+                    ball_ingame=false;
+                }
+
+            } else if (next_ball_pos_x > screen_width-border) {
+                /* Check if the pad2 is there */
+                if ( next_ball_pos_y <= p2_pos + bar_size && next_ball_pos_y >= p2_pos - bar_size) {
+                    ball_speed_x *= -1;
+                    ball_pos_x = screen_width - 2*border;
+                } else {
+                    /* Otherwise scores p1*/
+                    p1_score++;
+                    sprintf(p1_score_str,"%d", p1_score);
+                    ball_ingame=false;
+                }
+            }
+
+            // fprintf(stdout,"sball: %3d %3d\n", ball_speed_x, ball_speed_y);
+            // fprintf(stdout,"nball: %3d %3d\n", next_ball_pos_x, next_ball_pos_y);
+            // fprintf(stdout,"ball:  %3d %3d\n", ball_pos_x, ball_pos_y);
+
+            draw = true;
+        }
+
     }
 
     al_clear_to_color(background);
@@ -199,4 +286,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
