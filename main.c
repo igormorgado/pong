@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     const double dt = 1.0/FPS;
 
     /* Bar speed */
-    int bar_speed = 5;
+    int bar_speed = 16;
     
     //enum Direction { UP, DOWN, LEFT, RIGHT };
 
@@ -162,11 +162,17 @@ int main(int argc, char *argv[]) {
                     done = true;
                     break;
             }
-        } else if(events.type == ALLEGRO_EVENT_MOUSE_AXES) {
+        }
+        else if(events.type == ALLEGRO_EVENT_MOUSE_AXES)
+        {
             p1_pos = events.mouse.y;
-        // } else if(events.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
-            
-        } else if(events.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+            if (events.mouse.dz != 0) {
+                fprintf(stdout, "%d\n", events.mouse.dz);
+                if (p2_pos - 2*bar_speed * events.mouse.dz < bot_limit && p2_pos - 2*bar_speed * events.mouse.dz > top_limit)
+                    p2_pos -= 2*bar_speed*events.mouse.dz;
+            }
+        }
+        else if(events.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
             done = true;
         }
 
@@ -177,7 +183,7 @@ int main(int argc, char *argv[]) {
                 p2_pos += bar_speed;
             else if(al_key_down(&keystate, ALLEGRO_KEY_UP) && p2_pos > top_limit)
                 p2_pos -= bar_speed;
-            else if(al_key_down(&keystate, ALLEGRO_KEY_S) && p1_pos < bot_limit)
+            if(al_key_down(&keystate, ALLEGRO_KEY_S) && p1_pos < bot_limit)
                 p1_pos += bar_speed;
             else if(al_key_down(&keystate, ALLEGRO_KEY_W) && p1_pos > top_limit)
                 p1_pos -= bar_speed;
