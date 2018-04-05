@@ -12,17 +12,57 @@
 #define SCREENWIDTH 800
 #define SCREENHEIGHT 600
 
+#define BORDER 16
+#define PADSIZE 26
+
+
+typedef struct playerpad {
+    int position;
+    int size;
+    int speed;
+} PLAYERPAD;
+
+
+typedef struct ball {
+    int position_x;
+    int position_y;
+    int next_position_x;
+    int next_position_y;
+    int initial_speed_x;
+    int initial_speed_y;
+    int speed_x;
+    int speed_y;
+    bool ingame;
+} BALL;
+
+
+
+void draw_arena(int width, int height, ALLEGRO_COLOR color ) {
+    /*
+     * Draw the pong arena of size width and height with color
+     **/
+    int center_offset = BORDER/2;
+
+    al_draw_filled_rectangle( 0, 0,  width, BORDER, color);
+    al_draw_filled_rectangle( 0, height-BORDER, width, height, color);
+    
+    int r, nmax=15;
+
+    for(int n = 0; n<nmax; n++) {
+        r=n*(height/nmax)+center_offset;
+        al_draw_filled_rectangle((width-BORDER)/2, r, (width+BORDER)/2, r+BORDER, color);
+    }
+}
+
+void draw_player_pad(PLAYERPAD pad) {
+}
+
 int main(int argc, char *argv[]) {
 
     srand(time(NULL));
 
     const int FPS = 60;
     const double dt = 1.0/FPS;
-
-    /* Bar speed */
-    int bar_speed = 16;
-    
-    //enum Direction { UP, DOWN, LEFT, RIGHT };
 
     /* Screen attributes */
     int screen_width, screen_height;
@@ -38,13 +78,12 @@ int main(int argc, char *argv[]) {
     int ball_speed_x;
     int ball_speed_y;
 
+
+    int bot_limit, top_limit;
     /* Pong arena attributes */
-    int border = 16;            // must be even
-    int center_offset = border/2;
+    int bar_size = 50;
     int p1_pos;
     int p2_pos;
-    int bar_size = 25;
-    int bot_limit, top_limit;
     int p1_score = 0;
     int p2_score = 0;
     char p1_score_str[3];
@@ -53,6 +92,11 @@ int main(int argc, char *argv[]) {
     /* Loop status */
     bool done = false;
     bool draw = true;
+
+    PLAYERPAD p1;
+    p1.position = 
+    p1.size = 25;
+    p1.speed = 16;
 
 
     if(!al_init()) {
@@ -100,8 +144,8 @@ int main(int argc, char *argv[]) {
     vert_center = screen_height / 2;
     p1_pos = vert_center;
     p2_pos = vert_center;
-    bot_limit = screen_height - bar_size + bar_speed - border;
-    top_limit = bar_size - bar_speed + border;
+    bot_limit = screen_height - bar_size + bar_speed - BORDER;
+    top_limit = bar_size - bar_speed + BORDER;
     sprintf(p1_score_str,"%d", p1_score);
     sprintf(p2_score_str,"%d", p2_score);
 
@@ -143,34 +187,23 @@ int main(int argc, char *argv[]) {
             
             al_clear_to_color(background);
 
-            /*
-             * Pong arena 
-             **/
-            al_draw_filled_rectangle( 0, 0,  screen_width, border, white);
-            al_draw_filled_rectangle( 0, screen_height-border, screen_width, screen_height, white);
-
-            int ri, rn, nmax=15;
-            for(int n = 0; n<nmax; n++) {
-                ri=n*(screen_height/nmax)+center_offset;
-                rn=n*(screen_height/nmax)+border+center_offset;
-                al_draw_filled_rectangle(horz_center-border/2, ri, horz_center+border/2, rn, white);
-            }
+            draw_arena(screen_width, screen_height, white);
 
             /* Scores */
             al_draw_text(terminusbold, white, 300, 30, ALLEGRO_ALIGN_CENTER, p1_score_str);
             al_draw_text(terminusbold, white, 500, 30, ALLEGRO_ALIGN_CENTER, p2_score_str);
             
             /* Pong player 1 */
-            al_draw_filled_rectangle( border, p1_pos-bar_size, 2*border, p1_pos+bar_size, white);
+            al_draw_filled_rectangle( BORDER, p1_pos-bar_size, 2*BORDER, p1_pos+bar_size, white);
 
             /* Pong player 2 */
-            al_draw_filled_rectangle( 800-2*border, p2_pos-bar_size, 800-border, p2_pos+bar_size, white);
+            al_draw_filled_rectangle( 800-2*BORDER, p2_pos-bar_size, 800-BORDER, p2_pos+bar_size, white);
             
             /* The "ball" */
-            al_draw_filled_rectangle( ball_pos_x - border/2,
-                                      ball_pos_y - border/2,
-                                      ball_pos_x + border/2,
-                                      ball_pos_y + border/2,
+            al_draw_filled_rectangle( ball_pos_x - BORDER/2,
+                                      ball_pos_y - BORDER/2,
+                                      ball_pos_x + BORDER/2,
+                                      ball_pos_y + BORDER/2,
                                       grey);
 
             al_flip_display();
@@ -229,7 +262,7 @@ int main(int argc, char *argv[]) {
             next_ball_pos_x = ball_pos_x + ball_speed_x;
             next_ball_pos_y = ball_pos_y + ball_speed_y;
 
-            /* Check colision against border */
+            /* Check colision against BORDER */
             if ( next_ball_pos_y > top_limit && next_ball_pos_y < bot_limit) {
                 ball_pos_y = next_ball_pos_y; 
             } else if (next_ball_pos_y < top_limit) {
@@ -241,14 +274,14 @@ int main(int argc, char *argv[]) {
             }
 
             /* In fact here should score a point */
-            if ( next_ball_pos_x >= border && next_ball_pos_x <= screen_width-border ) {
+            if ( next_ball_pos_x >= BORDER && next_ball_pos_x <= screen_width-BORDER ) {
                 ball_pos_x = next_ball_pos_x; 
-            } else if (next_ball_pos_x < border) {
+            } else if (next_ball_pos_x < BORDER) {
                 /* Check if the pad1 is there */
                 if (( next_ball_pos_y <= p1_pos + bar_size && next_ball_pos_y >= p1_pos - bar_size) || 
                    ( ball_pos_y <= p1_pos + bar_size && ball_pos_y >= p1_pos - bar_size)) {
                     ball_speed_x *= -1;
-                    ball_pos_x = 2*border;
+                    ball_pos_x = 2*BORDER;
                 } else {
                     /* Otherwise scores p2 */
                     p2_score++;
@@ -256,12 +289,12 @@ int main(int argc, char *argv[]) {
                     ball_ingame=false;
                 }
 
-            } else if (next_ball_pos_x > screen_width-border) {
+            } else if (next_ball_pos_x > screen_width-BORDER) {
                 /* Check if the pad2 is there */
                 if (( next_ball_pos_y <= p2_pos + bar_size && next_ball_pos_y >= p2_pos - bar_size) || 
                    ( ball_pos_y <= p2_pos + bar_size && ball_pos_y >= p2_pos - bar_size)) {
                     ball_speed_x *= -1;
-                    ball_pos_x = screen_width - 2*border;
+                    ball_pos_x = screen_width - 2*BORDER;
                 } else {
                     /* Otherwise scores p1*/
                     p1_score++;
@@ -269,10 +302,6 @@ int main(int argc, char *argv[]) {
                     ball_ingame=false;
                 }
             }
-
-            // fprintf(stdout,"sball: %3d %3d\n", ball_speed_x, ball_speed_y);
-            // fprintf(stdout,"nball: %3d %3d\n", next_ball_pos_x, next_ball_pos_y);
-            // fprintf(stdout,"ball:  %3d %3d\n", ball_pos_x, ball_pos_y);
 
             draw = true;
         }
