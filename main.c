@@ -55,41 +55,14 @@ typedef struct screen {
 } SCREEN;
 
 
-void draw_arena(SCREEN *sc) {
-    /*
-     * Draw the pong arena based on SCREEN attributes, all WxH dependant
-     **/
-    al_draw_filled_rectangle( 0, 0, sc.width, sc.border, sc.color);
-    al_draw_filled_rectangle( 0, sc.height-sc.border, sc.width, sc.height, sc.foreground);
-    
-    int dot, numdots=15;
-
-    for(int i = 0; i<numdots; i++) {
-        dot = i*(sc.height/numdots)+sc.border/2
-        al_draw_filled_rectangle((sc.width-sc.border)/2, dot, (sc.width+sc.border)/2, dot+sc.border, sc.foreground);
-    }
-}
-
-
-void draw_player_pad(PLAYERPAD pad) {
-
-}
-
-
-int initialize_allegro() {
-    /* Initialize all allegro libs required by the game*/
-
-    if(!al_init()) {
-        al_show_native_message_box(NULL, "Init error", "ERROR", "Could not initialize Allegro 5", NULL, 0);
-        return -1;
-    }
-
-    al_set_new_display_flags(ALLEGRO_WINDOWED);
-    ALLEGRO_DISPLAY *display = al_create_display(SCREENWIDTH, SCREENHEIGHT);
-    if(!display) {
-        al_show_native_message_box(NULL, "Window error", "ERROR", "Could not create Allegro window", NULL, 0);
-        return -1;
-    }
+/* ********************************************************************** 
+ *
+ * INITIALIZATION FUNCTIONS
+ *
+ * **********************************************************************/
+ 
+int initialize_allegro_addons(void) {
+    /* Initialize all allegro addons required by the game*/
 
     if (!al_init_font_addon()) {
         al_show_native_message_box(NULL, "Font error", "ERROR", "Could not initialize Allegro 5 Font addon", NULL, 0);
@@ -120,86 +93,91 @@ int initialize_allegro() {
 }
 
 
-int main(int argc, char *argv[]) {
-
-    srand(time(NULL));
-
-    const int FPS = 60;
-    const double dt = 1.0/FPS;
-
-    /* Reference to all screen stuff */
-    SCREEN sc;
-
-    /* The ball */
-    BALL ball;
-
-    /* The Players */
-    PLAYER p1;
-    PLAYER p2;
-
-    /* Loop status */
-    bool done = false;
-    bool draw = true;
+void init_screen(SCREEN *sc) {
+    /* Like OO initial values ;-) */
+    sc->width  = al_get_display_width(display);
+    sc->height = al_get_display_height(display);
+    sc->border = (int)(sc->width/75);
+    sc->hcenter = (int)(sc->width/2);
+    sc->vcenter = (int)(sc->height/2);
+    sc->bot  = sc->height-sc->border;
+    sc->top  = sc->border;
+    sc->foreground = *foreground;
+    sc->background = *background;
+}
 
 
-    initialize_allegro();
+void init_player(PLAYER *p, SCREEN *sc, ALLEGRO_COLOR *color) {
+    /* Initialize PLAYER on SCREEN */
+    p->score = 0;
+    sprintf(p->scorestr, "%d", p->score);
+    p->pad->position = sc->vcenter;
+    p->pad->size = sc->height / 16;
+    p->pad->speed = sc->height / 80;
+    p->pad->color = color;
+}
 
-    al_set_window_title(display, "PONG!");
 
-    screen_width  = al_get_display_width(display);
-    screen_height = al_get_display_height(display);
-    horz_center = screen_width / 2;
-    vert_center = screen_height / 2;
-    p1_pos = vert_center;
-    p2_pos = vert_center;
-    bot_limit = screen_height - bar_size + bar_speed - BORDER;
-    top_limit = bar_size - bar_speed + BORDER;
-    sprintf(p1_score_str,"%d", p1_score);
-    sprintf(p2_score_str,"%d", p2_score);
+void init_ball(BALL &b, SCREEN &sc, ALLEGRO_COLOR color) {
 
-    ALLEGRO_FONT *terminusbold = al_load_font("terminusbold.ttf", 80, 0);
+    /* Find a random direction in both axis */
+    int dir_x = rand() % 2 ? 1:-1;
+    int dir_y = rand() % 2 ? 1:-1;
 
-    ALLEGRO_COLOR white      = al_map_rgb(255, 255, 255);
-    ALLEGRO_COLOR grey       = al_map_rgb(255, 200, 200);
-    ALLEGRO_COLOR background = al_map_rgb(0, 0, 0);
+    b->position_x = sc->hcenter;
+    b->position_y = sc->vcenter;
+    b->initial_speed_x = sc->width/160;
+    b->initial_speed_y = sc->height/120;
+    b->speed_x = *(b->initial_speed_x) * dir_x;
+    b->speed_y = *(b->initial_speed_y) * dir_y;;
+    b->ingame = false;
+    b->color = color;
+}
 
-    ALLEGRO_EVENT events;
-    ALLEGRO_TIMER *timer     = al_create_timer(dt);
-    ALLEGRO_TIMER *balltimer = al_create_timer(dt);
-    ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
-    ALLEGRO_KEYBOARD_STATE keystate;
+/* ********************************************************************** 
+ * **********************************************************************/
 
-    al_register_event_source(event_queue, al_get_keyboard_event_source());
-    al_register_event_source(event_queue, al_get_mouse_event_source());
-    al_register_event_source(event_queue, al_get_timer_event_source(timer));
-    al_register_event_source(event_queue, al_get_display_event_source(display));
+/* ********************************************************************** 
+ *
+ * DRAWING FUNCTIONS
+ *
+ * **********************************************************************/
 
-    /* Main loop */
+void draw_arena(SCREEN *sc) {
+    /*
+     * Draw the pong arena based on SCREEN attributes, all WxH dependant
+     **/
+    al_draw_filled_rectangle( 0, 0, sc.width, sc.border, sc.color);
+    al_draw_filled_rectangle( 0, sc.height-sc.border, sc.width, sc.height, sc.foreground);
+    
+    int dot, numdots=15;
 
-    al_start_timer(timer);
-    while(!done) {
-        
-        if(!ball_ingame) {
-            /* Ball start in middle of screen */
-            ball_pos_x = horz_center;
-            ball_pos_y = vert_center;
+    for(int i = 0; i<numdots; i++) {
+        dot = i*(sc.height/numdots)+sc.border/2
+        al_draw_filled_rectangle((sc.width-sc.border)/2, dot, (sc.width+sc.border)/2, dot+sc.border, sc.foreground);
+    }
+}
 
-            ball_direction = rand() % 2 ? 1:-1;
-            ball_speed_x = ball_direction*initial_ball_speed_x;
+void draw_scores(ALLEGRO_FONT *font, ALLEGRO_COLOR *color, PLAYER **p) {
+    /* Scores */
+    al_draw_text(font, color, 300, 30, ALLEGRO_ALIGN_CENTER, p[0]->score_str);
+    al_draw_text(font, color, 500, 30, ALLEGRO_ALIGN_CENTER, p[1]->score_str);
+}
 
-            ball_direction = rand() % 2 ? 1:-1;
-            ball_speed_y = ball_direction*initial_ball_speed_y;
+void draw_player_pad(PLAYER *p) {
+}
+
+void draw_pads() { }
+void draw_ball(BALL *b) {
+}
+
+            draw_scores(players);
+            draw_pads(players);
+            draw_ball(&ball)
+            al_flip_display();
+            draw = false;
         }
 
-        if(draw) {
-            
-            al_clear_to_color(background);
-
-            draw_arena(screen_width, screen_height, white);
-
-            /* Scores */
-            al_draw_text(terminusbold, white, 300, 30, ALLEGRO_ALIGN_CENTER, p1_score_str);
-            al_draw_text(terminusbold, white, 500, 30, ALLEGRO_ALIGN_CENTER, p2_score_str);
             
             /* Pong player 1 */
             al_draw_filled_rectangle( BORDER, p1_pos-bar_size, 2*BORDER, p1_pos+bar_size, white);
@@ -214,13 +192,104 @@ int main(int argc, char *argv[]) {
                                       ball_pos_y + BORDER/2,
                                       grey);
 
-            al_flip_display();
+/* ********************************************************************** 
+ * **********************************************************************/
 
+int main(int argc, char *argv[]) {
+
+    /* Init allegro or don't even start anything */
+    if(!al_init()) {
+        al_show_native_message_box(NULL, "Init error", "ERROR", "Could not initialize Allegro 5", NULL, 0);
+        return -1;
+    }
+
+    al_set_new_display_flags(ALLEGRO_WINDOWED);
+    ALLEGRO_DISPLAY *display = al_create_display(SCREENWIDTH, SCREENHEIGHT);
+
+    if(!display) {
+        al_show_native_message_box(NULL, "Window error", "ERROR", "Could not create Allegro window", NULL, 0);
+        return -1;
+    }
+
+    initialize_allegro_addons();
+    al_set_window_title(display, "PONG!");
+
+    srand(time(NULL));
+    const int FPS = 60;
+    const double dt = 1.0/FPS;
+
+
+    /* Game Standards */
+    ALLEGRO_COLOR white      = al_map_rgb(255, 255, 255);
+    ALLEGRO_COLOR grey70     = al_map_rgb(200, 200, 200);
+    ALLEGRO_COLOR black      = al_map_rgb(  0,   0,   0);
+
+    ALLEGRO_COLOR *foreground =  &grey70;
+    ALLEGRO_COLOR *ball_color =  &white;
+    ALLEGRO_COLOR *background =  &black;
+
+    ALLEGRO_FONT *terminusbold = al_load_font("terminusbold.ttf", 80, 0);
+
+    ALLEGRO_TIMER *timer       = al_create_timer(dt);
+
+    ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
+    al_register_event_source(event_queue, al_get_keyboard_event_source());
+    al_register_event_source(event_queue, al_get_mouse_event_source());
+    al_register_event_source(event_queue, al_get_timer_event_source(timer));
+    al_register_event_source(event_queue, al_get_display_event_source(display));
+
+    ALLEGRO_EVENT events;
+    ALLEGRO_KEYBOARD_STATE keystate;
+
+    /* Filling screen structure attributes */
+    SCREEN sc;
+    init_screen(&sc);
+
+    /* The ball */
+    BALL ball;
+    init_ball(&ball, &sc, ball_color);
+
+    /* The Players */
+    PLAYER p1;
+    PLAYER p2;
+    PLAYER players[2] = { p1, p2 };
+    init_player(&p1, &sc, foreground);
+    init_player(&p2, &sc, foreground);
+
+    /* Loop status */
+    bool done = false;
+    bool draw = true;
+
+
+    /* **********************************************************************
+     *
+     * Main loop 
+     *
+     * **********************************************************************/
+    al_start_timer(timer);
+    while(!done) {
+        
+        if(!ball.ingame) 
+            init_ball(&ball, &sc, ball_color);
+
+        if(draw) {
+            al_clear_to_color(background);
+            draw_arena(&sc);
+            draw_scores(players);
+            draw_pads(players);
+            draw_ball(&ball)
+            al_flip_display();
             draw = false;
         }
 
         al_wait_for_event(event_queue, &events);
 
+        /*
+         * What is the best way to make these event captring external to
+         * main()?
+         */
+        
+        /* Input devices events */
         if(events.type == ALLEGRO_EVENT_KEY_UP)
         {
             switch(events.keyboard.keycode)
@@ -229,47 +298,63 @@ int main(int argc, char *argv[]) {
                     done = true;
                     break;
                 case ALLEGRO_KEY_SPACE:
-                    ball_ingame = true;
+                    ball.ingame = true;
                     break;
             }
         }
-        else if(events.type == ALLEGRO_EVENT_MOUSE_AXES)
+
+        if(events.type == ALLEGRO_EVENT_MOUSE_AXES)
         {
             p1_pos = events.mouse.y;
             if (events.mouse.dz != 0) {
+                // TODO: ADD MOVE PAD FUNCTIONS
+                //      REMOVE ALL THOSE CALCULATIONS FROM HERE!
                 fprintf(stdout, "%d\n", events.mouse.dz);
                 if (p2_pos - 2*bar_speed * events.mouse.dz < bot_limit && p2_pos - 2*bar_speed * events.mouse.dz > top_limit)
                     p2_pos -= 2*bar_speed*events.mouse.dz;
             }
         }
-        else if(events.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+
+        if(events.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+        {
             done = true;
         }
 
+
+        /* Timer events */
         if(events.type == ALLEGRO_EVENT_TIMER)
         {
             al_get_keyboard_state(&keystate);
             
-            /* Player 2 keys */
-            if(al_key_down(&keystate, ALLEGRO_KEY_DOWN) && p2_pos < bot_limit)
-                p2_pos += bar_speed;
-            else if(al_key_down(&keystate, ALLEGRO_KEY_UP) && p2_pos > top_limit)
-                p2_pos -= bar_speed;
-
+            // TODO: REMOVE THE REPOSITIONING FROM HERE, CREATE A FUNCTION
+            //      FOR THAT.
+            
             /* Playe 1 keys */
             if(al_key_down(&keystate, ALLEGRO_KEY_S) && p1_pos < bot_limit)
                 p1_pos += bar_speed;
             else if(al_key_down(&keystate, ALLEGRO_KEY_W) && p1_pos > top_limit)
                 p1_pos -= bar_speed;
 
+            /* Player 2 keys */
+            if(al_key_down(&keystate, ALLEGRO_KEY_DOWN) && p2_pos < bot_limit)
+                p2_pos += bar_speed;
+            else if(al_key_down(&keystate, ALLEGRO_KEY_UP) && p2_pos > top_limit)
+                p2_pos -= bar_speed;
+
+
             draw = true;
         }
 
         if(ball_ingame) {
 
+            // TODO: CREATE A FUNCTION TO GAME ITERATION. TO NOT DO IT HERE
             next_ball_pos_x = ball_pos_x + ball_speed_x;
             next_ball_pos_y = ball_pos_y + ball_speed_y;
 
+            // TODO: CREATE ROUTINES FOR COLLISION DETECTION
+            //      TAKE THE CALCULATIONS OUT OF HERE, CREATE REPOSITIONING
+            //      FUNCTIONS
+            
             /* Check colision against BORDER */
             if ( next_ball_pos_y > top_limit && next_ball_pos_y < bot_limit) {
                 ball_pos_y = next_ball_pos_y; 
@@ -282,6 +367,10 @@ int main(int argc, char *argv[]) {
             }
 
             /* In fact here should score a point */
+
+            // TODO: REMOVE ALL COLISION CHECK FROM HERE
+            //      CREATE SCORE FUNCTIONS
+            
             if ( next_ball_pos_x >= BORDER && next_ball_pos_x <= screen_width-BORDER ) {
                 ball_pos_x = next_ball_pos_x; 
             } else if (next_ball_pos_x < BORDER) {
@@ -323,3 +412,5 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
+// vim:foldmethod=syntax:foldlevel=5
