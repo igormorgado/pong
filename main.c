@@ -75,32 +75,9 @@ void draw_player_pad(PLAYERPAD pad) {
 
 }
 
-int main(int argc, char *argv[]) {
 
-    srand(time(NULL));
-
-    const int FPS = 60;
-    const double dt = 1.0/FPS;
-
-    /* Reference to all screen stuff */
-    SCREEN sc;
-
-    /* The ball */
-    BALL ball;
-
-    /* The Players */
-    PLAYER p1;
-    PLAYER p2;
-
-    /* Loop status */
-    bool done = false;
-    bool draw = true;
-
-    PLAYERPAD p1;
-    p1.position = 
-    p1.size = 25;
-    p1.speed = 16;
-
+int initialize_allegro() {
+    /* Initialize all allegro libs required by the game*/
 
     if(!al_init()) {
         al_show_native_message_box(NULL, "Init error", "ERROR", "Could not initialize Allegro 5", NULL, 0);
@@ -138,6 +115,34 @@ int main(int argc, char *argv[]) {
         al_show_native_message_box(NULL, "Mouse Error", "ERROR", "Could not initialize Allegro 5 Mouse", NULL, 0);
         return -1;
     }
+
+    return 0;
+}
+
+
+int main(int argc, char *argv[]) {
+
+    srand(time(NULL));
+
+    const int FPS = 60;
+    const double dt = 1.0/FPS;
+
+    /* Reference to all screen stuff */
+    SCREEN sc;
+
+    /* The ball */
+    BALL ball;
+
+    /* The Players */
+    PLAYER p1;
+    PLAYER p2;
+
+    /* Loop status */
+    bool done = false;
+    bool draw = true;
+
+
+    initialize_allegro();
 
     al_set_window_title(display, "PONG!");
 
