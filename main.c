@@ -110,7 +110,7 @@ void init_screen(ALLEGRO_DISPLAY *display, SCREEN *sc, ALLEGRO_COLOR *foreground
 void init_player(PLAYER *p, SCREEN *sc, ALLEGRO_COLOR *color) {
     /* Initialize PLAYER on SCREEN */
     p->score = 0;
-    sprintf(p->scorestr, "%d", p->score);
+    snprintf(p->scorestr, sizeof p->scorestr,  "%i", p->score);
     p->pad.position = sc->vcenter;
     p->pad.size = sc->height / 16;
     p->pad.speed = sc->height / 80;
@@ -159,10 +159,12 @@ void draw_arena(SCREEN *sc) {
     }
 }
 
-void draw_scores(ALLEGRO_FONT *font, ALLEGRO_COLOR *color, PLAYER **p, SCREEN *sc) {
+void draw_scores(ALLEGRO_FONT *font, ALLEGRO_COLOR *color, PLAYER *p, SCREEN *sc) {
     /* Scores */
-    al_draw_text(font, *color, sc->hcenter-100, 2*sc->border, ALLEGRO_ALIGN_CENTER, p[0]->scorestr);
-    al_draw_text(font, *color, sc->hcenter+100, 2*sc->border, ALLEGRO_ALIGN_CENTER, p[1]->scorestr);
+    fprintf(stdout, "p[0] x: %i i%i s%s\n", sc->hcenter-100, p[0].score, p[0].scorestr);
+    al_draw_text(font, *color, sc->hcenter-100, 2*sc->border, ALLEGRO_ALIGN_CENTER, p[0].scorestr);
+    fprintf(stdout, "p[1] x: %i i%i s%s\n", sc->hcenter+100, p[1].score, p[1].scorestr);
+    al_draw_text(font, *color, sc->hcenter+100, 2*sc->border, ALLEGRO_ALIGN_CENTER, p[1].scorestr);
 }
 
 
