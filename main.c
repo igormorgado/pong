@@ -102,8 +102,8 @@ void init_screen(ALLEGRO_DISPLAY *display, SCREEN *sc, ALLEGRO_COLOR *foreground
     sc->vcenter = (int)(sc->height/2);
     sc->bot_limit  = sc->height-sc->border;
     sc->top_limit  = sc->border;
-    sc->foreground = foreground;
-    sc->background = background;
+    sc->foreground = *foreground;
+    sc->background = *background;
 }
 
 
@@ -114,11 +114,11 @@ void init_player(PLAYER *p, SCREEN *sc, ALLEGRO_COLOR *color) {
     p->pad.position = sc->vcenter;
     p->pad.size = sc->height / 16;
     p->pad.speed = sc->height / 80;
-    p->pad.color = color;
+    p->pad.color = *color;
 }
 
 
-void init_ball(BALL *b, SCREEN *sc, ALLEGRO_COLOR color) {
+void init_ball(BALL *b, SCREEN *sc, ALLEGRO_COLOR *color) {
 
     /* Find a random direction in both axis */
     int dir_x = rand() % 2 ? 1:-1;
@@ -131,7 +131,7 @@ void init_ball(BALL *b, SCREEN *sc, ALLEGRO_COLOR color) {
     b->speed_x = b->initial_speed_x * dir_x;
     b->speed_y = b->initial_speed_y * dir_y;;
     b->ingame = false;
-    b->color = color;
+    b->color = *color;
 }
 
 /* ********************************************************************** 
@@ -159,10 +159,10 @@ void draw_arena(SCREEN *sc) {
     }
 }
 
-void draw_scores(ALLEGRO_FONT *font, ALLEGRO_COLOR *color, PLAYER **p) {
+void draw_scores(ALLEGRO_FONT *font, ALLEGRO_COLOR *color, PLAYER **p, SCREEN *sc) {
     /* Scores */
-    al_draw_text(font, *color, 300, 30, ALLEGRO_ALIGN_CENTER, p[0]->scorestr);
-    al_draw_text(font, *color, 500, 30, ALLEGRO_ALIGN_CENTER, p[1]->scorestr);
+    al_draw_text(font, *color, sc->hcenter-100, 2*sc->border, ALLEGRO_ALIGN_CENTER, p[0]->scorestr);
+    al_draw_text(font, *color, sc->hcenter+100, 2*sc->border, ALLEGRO_ALIGN_CENTER, p[1]->scorestr);
 }
 
 
@@ -181,10 +181,10 @@ void draw_pads(PLAYER **p, SCREEN *sc) {
 
 void draw_ball(BALL *b, SCREEN *sc) {
     /* The "ball" */
-    al_draw_filled_rectangle( b->pos_x - sc->border/2,
-                              b->pos_y - sc->border/2,
-                              b->pos_x + sc->border/2,
-                              b->pos_y + sc->border/2,
+    al_draw_filled_rectangle( b->position_x - sc->border/2,
+                              b->position_y - sc->border/2,
+                              b->position_x + sc->border/2,
+                              b->position_y + sc->border/2,
                               b->color);
 }
 
@@ -224,8 +224,8 @@ int main(int argc, char *argv[]) {
     ALLEGRO_COLOR black  = al_map_rgb(  0,   0,   0);
 
     ALLEGRO_COLOR *foreground = &grey70;
-    ALLEGRO_COLOR *ball_color = &white;
     ALLEGRO_COLOR *background = &black;
+    ALLEGRO_COLOR *ball_color = &white;
 
     ALLEGRO_FONT *terminusbold = al_load_font("terminusbold.ttf", 80, 0);
 
@@ -242,13 +242,13 @@ int main(int argc, char *argv[]) {
 
     /* Filling screen structure attributes */
     SCREEN sc;
-    init_screen(display, &sc, *foreground, *background);
+    init_screen(display, &sc, foreground, background);
 
     /* The ball */
     BALL ball;
-    init_ball(&ball, &sc, *ball_color);
+    init_ball(&ball, &sc, ball_color);
 
-    /* The Players */
+    // /* The Players */
     PLAYER p1;
     PLAYER p2;
     PLAYER players[2] = { p1, p2 };
@@ -271,142 +271,142 @@ int main(int argc, char *argv[]) {
         if(!ball.ingame) 
             init_ball(&ball, &sc, ball_color);
 
-        if(draw) {
-            draw_arena(&sc);
-            draw_scores(terminusbold, white, players);
-            draw_pads(players, &sc);
-            draw_ball(&ball, &sc);
-            al_flip_display();
-            draw = false;
-        }
+         if(draw) {
+             draw_arena(&sc);
+             draw_scores(terminusbold, foreground, players, &sc);
+    //         draw_pads(players, &sc);
+    //         draw_ball(&ball, &sc);
+             al_flip_display();
+             draw = false;
+         }
 
-        al_wait_for_event(event_queue, &events);
+    //     al_wait_for_event(event_queue, &events);
 
-        /*
-         * What is the best way to make these event captring external to
-         * main()?
-         */
-        
-        /* Window events
-         * TODO: ADD resizeability
-         */
-        if(events.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
-        {
-            done = true;
-        }
+    //     /*
+    //      * What is the best way to make these event captring external to
+    //      * main()?
+    //      */
+    //     
+    //     /* Window events
+    //      * TODO: ADD resizeability
+    //      */
+    //     if(events.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+    //     {
+    //         done = true;
+    //     }
 
-        /* Input devices events */
-        if(events.type == ALLEGRO_EVENT_KEY_UP)
-        {
-            switch(events.keyboard.keycode)
-            {
-                case ALLEGRO_KEY_ESCAPE:
-                    done = true;
-                    break;
-                case ALLEGRO_KEY_SPACE:
-                    ball.ingame = true;
-                    break;
-            }
-        }
-        
+    //     /* Input devices events */
+    //     if(events.type == ALLEGRO_EVENT_KEY_UP)
+    //     {
+    //         switch(events.keyboard.keycode)
+    //         {
+    //             case ALLEGRO_KEY_ESCAPE:
+    //                 done = true;
+    //                 break;
+    //             case ALLEGRO_KEY_SPACE:
+    //                 ball.ingame = true;
+    //                 break;
+    //         }
+    //     }
+    //     
 
-        // TODO: REWRITE MOVEMENT AND COLLISION DETECTION
-        
-        // if(events.type == ALLEGRO_EVENT_MOUSE_AXES)
-        // {
-        //     p1_pos = events.mouse.y;
-        //     if (events.mouse.dz != 0) {
-        //         // TODO: ADD MOVE PAD FUNCTIONS
-        //         //      REMOVE ALL THOSE CALCULATIONS FROM HERE!
-        //         fprintf(stdout, "%d\n", events.mouse.dz);
-        //         if (p2_pos - 2*bar_speed * events.mouse.dz < bot_limit && p2_pos - 2*bar_speed * events.mouse.dz > top_limit)
-        //             p2_pos -= 2*bar_speed*events.mouse.dz;
-        //     }
-        // }
-
-
-
-        // /* Timer events */
-        // if(events.type == ALLEGRO_EVENT_TIMER)
-        // {
-        //     al_get_keyboard_state(&keystate);
-        //     
-        //     // TODO: REMOVE THE REPOSITIONING FROM HERE, CREATE A FUNCTION
-        //     //      FOR THAT.
-        //     
-        //     /* Playe 1 keys */
-        //     if(al_key_down(&keystate, ALLEGRO_KEY_S) && p1_pos < bot_limit)
-        //         p1_pos += bar_speed;
-        //     else if(al_key_down(&keystate, ALLEGRO_KEY_W) && p1_pos > top_limit)
-        //         p1_pos -= bar_speed;
-
-        //     /* Player 2 keys */
-        //     if(al_key_down(&keystate, ALLEGRO_KEY_DOWN) && p2_pos < bot_limit)
-        //         p2_pos += bar_speed;
-        //     else if(al_key_down(&keystate, ALLEGRO_KEY_UP) && p2_pos > top_limit)
-        //         p2_pos -= bar_speed;
+    //     // TODO: REWRITE MOVEMENT AND COLLISION DETECTION
+    //     
+    //     // if(events.type == ALLEGRO_EVENT_MOUSE_AXES)
+    //     // {
+    //     //     p1_pos = events.mouse.y;
+    //     //     if (events.mouse.dz != 0) {
+    //     //         // TODO: ADD MOVE PAD FUNCTIONS
+    //     //         //      REMOVE ALL THOSE CALCULATIONS FROM HERE!
+    //     //         fprintf(stdout, "%d\n", events.mouse.dz);
+    //     //         if (p2_pos - 2*bar_speed * events.mouse.dz < bot_limit && p2_pos - 2*bar_speed * events.mouse.dz > top_limit)
+    //     //             p2_pos -= 2*bar_speed*events.mouse.dz;
+    //     //     }
+    //     // }
 
 
-        //     draw = true;
-        // }
 
-        // if(ball_ingame) {
+    //     // /* Timer events */
+    //     // if(events.type == ALLEGRO_EVENT_TIMER)
+    //     // {
+    //     //     al_get_keyboard_state(&keystate);
+    //     //     
+    //     //     // TODO: REMOVE THE REPOSITIONING FROM HERE, CREATE A FUNCTION
+    //     //     //      FOR THAT.
+    //     //     
+    //     //     /* Playe 1 keys */
+    //     //     if(al_key_down(&keystate, ALLEGRO_KEY_S) && p1_pos < bot_limit)
+    //     //         p1_pos += bar_speed;
+    //     //     else if(al_key_down(&keystate, ALLEGRO_KEY_W) && p1_pos > top_limit)
+    //     //         p1_pos -= bar_speed;
 
-        //     // TODO: CREATE A FUNCTION TO GAME ITERATION. TO NOT DO IT HERE
-        //     next_ball_pos_x = ball_pos_x + ball_speed_x;
-        //     next_ball_pos_y = ball_pos_y + ball_speed_y;
+    //     //     /* Player 2 keys */
+    //     //     if(al_key_down(&keystate, ALLEGRO_KEY_DOWN) && p2_pos < bot_limit)
+    //     //         p2_pos += bar_speed;
+    //     //     else if(al_key_down(&keystate, ALLEGRO_KEY_UP) && p2_pos > top_limit)
+    //     //         p2_pos -= bar_speed;
 
-        //     // TODO: CREATE ROUTINES FOR COLLISION DETECTION
-        //     //      TAKE THE CALCULATIONS OUT OF HERE, CREATE REPOSITIONING
-        //     //      FUNCTIONS
-        //     
-        //     /* Check colision against BORDER */
-        //     if ( next_ball_pos_y > top_limit && next_ball_pos_y < bot_limit) {
-        //         ball_pos_y = next_ball_pos_y; 
-        //     } else if (next_ball_pos_y < top_limit) {
-        //         ball_pos_y = top_limit;
-        //         ball_speed_y *= -1;
-        //     } else if (next_ball_pos_y > bot_limit) {
-        //         ball_pos_y = bot_limit;
-        //         ball_speed_y *= -1;
-        //     }
 
-        //     /* In fact here should score a point */
+    //     //     draw = true;
+    //     // }
 
-        //     // TODO: REMOVE ALL COLISION CHECK FROM HERE
-        //     //      CREATE SCORE FUNCTIONS
-        //     
-        //     if ( next_ball_pos_x >= BORDER && next_ball_pos_x <= screen_width-BORDER ) {
-        //         ball_pos_x = next_ball_pos_x; 
-        //     } else if (next_ball_pos_x < BORDER) {
-        //         /* Check if the pad1 is there */
-        //         if (( next_ball_pos_y <= p1_pos + bar_size && next_ball_pos_y >= p1_pos - bar_size) || 
-        //            ( ball_pos_y <= p1_pos + bar_size && ball_pos_y >= p1_pos - bar_size)) {
-        //             ball_speed_x *= -1;
-        //             ball_pos_x = 2*BORDER;
-        //         } else {
-        //             /* Otherwise scores p2 */
-        //             p2_score++;
-        //             sprintf(p2_score_str,"%d", p2_score);
-        //             ball_ingame=false;
-        //         }
+    //     // if(ball_ingame) {
 
-        //     } else if (next_ball_pos_x > screen_width-BORDER) {
-        //         /* Check if the pad2 is there */
-        //         if (( next_ball_pos_y <= p2_pos + bar_size && next_ball_pos_y >= p2_pos - bar_size) || 
-        //            ( ball_pos_y <= p2_pos + bar_size && ball_pos_y >= p2_pos - bar_size)) {
-        //             ball_speed_x *= -1;
-        //             ball_pos_x = screen_width - 2*BORDER;
-        //         } else {
-        //             /* Otherwise scores p1*/
-        //             p1_score++;
-        //             sprintf(p1_score_str,"%d", p1_score);
-        //             ball_ingame=false;
-        //         }
-        //     }
+    //     //     // TODO: CREATE A FUNCTION TO GAME ITERATION. TO NOT DO IT HERE
+    //     //     next_ball_pos_x = ball_pos_x + ball_speed_x;
+    //     //     next_ball_pos_y = ball_pos_y + ball_speed_y;
 
-        //     draw = true;
-        // }
+    //     //     // TODO: CREATE ROUTINES FOR COLLISION DETECTION
+    //     //     //      TAKE THE CALCULATIONS OUT OF HERE, CREATE REPOSITIONING
+    //     //     //      FUNCTIONS
+    //     //     
+    //     //     /* Check colision against BORDER */
+    //     //     if ( next_ball_pos_y > top_limit && next_ball_pos_y < bot_limit) {
+    //     //         ball_pos_y = next_ball_pos_y; 
+    //     //     } else if (next_ball_pos_y < top_limit) {
+    //     //         ball_pos_y = top_limit;
+    //     //         ball_speed_y *= -1;
+    //     //     } else if (next_ball_pos_y > bot_limit) {
+    //     //         ball_pos_y = bot_limit;
+    //     //         ball_speed_y *= -1;
+    //     //     }
+
+    //     //     /* In fact here should score a point */
+
+    //     //     // TODO: REMOVE ALL COLISION CHECK FROM HERE
+    //     //     //      CREATE SCORE FUNCTIONS
+    //     //     
+    //     //     if ( next_ball_pos_x >= BORDER && next_ball_pos_x <= screen_width-BORDER ) {
+    //     //         ball_pos_x = next_ball_pos_x; 
+    //     //     } else if (next_ball_pos_x < BORDER) {
+    //     //         /* Check if the pad1 is there */
+    //     //         if (( next_ball_pos_y <= p1_pos + bar_size && next_ball_pos_y >= p1_pos - bar_size) || 
+    //     //            ( ball_pos_y <= p1_pos + bar_size && ball_pos_y >= p1_pos - bar_size)) {
+    //     //             ball_speed_x *= -1;
+    //     //             ball_pos_x = 2*BORDER;
+    //     //         } else {
+    //     //             /* Otherwise scores p2 */
+    //     //             p2_score++;
+    //     //             sprintf(p2_score_str,"%d", p2_score);
+    //     //             ball_ingame=false;
+    //     //         }
+
+    //     //     } else if (next_ball_pos_x > screen_width-BORDER) {
+    //     //         /* Check if the pad2 is there */
+    //     //         if (( next_ball_pos_y <= p2_pos + bar_size && next_ball_pos_y >= p2_pos - bar_size) || 
+    //     //            ( ball_pos_y <= p2_pos + bar_size && ball_pos_y >= p2_pos - bar_size)) {
+    //     //             ball_speed_x *= -1;
+    //     //             ball_pos_x = screen_width - 2*BORDER;
+    //     //         } else {
+    //     //             /* Otherwise scores p1*/
+    //     //             p1_score++;
+    //     //             sprintf(p1_score_str,"%d", p1_score);
+    //     //             ball_ingame=false;
+    //     //         }
+    //     //     }
+
+    //     //     draw = true;
+    //     // }
 
     }
 
