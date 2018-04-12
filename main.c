@@ -15,17 +15,6 @@
 #define SCREENWIDTH     800
 #define SCREENHEIGHT    600
 
-/* TODO:
- *      add ball effects when hit movin in a direction
- *      add ball speedup
- *      joystick support
- *      add sprites
- *      menu screen
- *      add graphical effects
- *      add modern theme and animations
- *      add AI
- */
-
 enum player_side { LEFT, RIGHT };
 enum move_direction { UP, DOWN};
 
@@ -320,12 +309,6 @@ bool norm_collision(BALL *b, PLAYER *p) {
     }
 }
 
-/* **********************************************************************
- * 
- * Movement function
- *
- * **********************************************************************/
-
 
 bool wall_collision(BALL *b, SCREEN *sc) {
     if (b->position_y < sc->top_limit || b->position_y > sc->bot_limit) {
@@ -335,7 +318,11 @@ bool wall_collision(BALL *b, SCREEN *sc) {
     }
 }
 
-
+/* **********************************************************************
+ * 
+ * Movement function
+ *
+ * **********************************************************************/
 
 void move_ball(BALL *b, PLAYER **p, SCREEN *sc) {
     if (box_collision(b, p[0]) || box_collision(b, p[1])) {
@@ -493,7 +480,6 @@ int main(int argc, char *argv[]) {
             redraw_player(p2, &sc);
             al_flip_display();
         }
-
 
         /* Input devices events */
         if(events.type == ALLEGRO_EVENT_KEY_UP)

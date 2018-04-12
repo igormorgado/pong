@@ -36,13 +36,20 @@ This code is completely GNU/GPLv2
 TODO
 ====
 
-enchance timers and collision detection
+* Joystick support 
 
-input is laggy with the ball timer, fix that
+* Menu
 
-rewrite code completely
+* AI
 
-Be able to redraw screen correctly if screen is resized. (all parametric to screen sizes)
+* Modern theme (using sprites and effects)
+
+* Ball speed up after time
+
+* Ball y speed changes when hitting with a moving pad (effects)
+
+
+
 
 Thanks
 =====
