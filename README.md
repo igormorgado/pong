@@ -42,6 +42,8 @@ input is laggy with the ball timer, fix that
 
 rewrite code completely
 
+Be able to redraw screen correctly if screen is resized. (all parametric to screen sizes)
+
 Thanks
 =====
 

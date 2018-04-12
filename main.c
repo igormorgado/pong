@@ -3,6 +3,8 @@
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_primitives.h>
+#include <allegro5/allegro_audio.h>
+#include <allegro5/allegro_acodec.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,11 +16,14 @@
 #define SCREENHEIGHT    600
 
 /* TODO:
- *      add sound effects
+ *      add ball effects when hit movin in a direction
+ *      add ball speedup
+ *      joystick support
  *      add sprites
- *      add initial menu
- *      add modern theme and animations
+ *      menu screen
  *      add graphical effects
+ *      add modern theme and animations
+ *      add AI
  */
 
 enum player_side { LEFT, RIGHT };
@@ -40,6 +45,7 @@ typedef struct player {
     int  score;             // 0
     char scorestr[3];       // sprintf(scorestr, "%d", score)
     PLAYERPAD pad;
+    ALLEGRO_SAMPLE *sound;
 } PLAYER;
 
 
@@ -50,6 +56,8 @@ typedef struct ball {
     int initial_speed_y;    // SCREENHEIGHT/120
     int speed_x;
     int speed_y;
+    int speed_increase_x;
+    int speed_increase_y;
     int size;
     bool ingame;            // False
     ALLEGRO_COLOR color;    // white
@@ -104,6 +112,16 @@ int initialize_allegro_addons(void) {
         return -1;
     }
 
+    if (!al_install_audio()) {
+        al_show_native_message_box(NULL, "Audio Error", "ERROR", "Could not initialize Allegro 5 Audio addon", NULL, 0);
+        return -1;
+    }
+
+    if(!al_init_acodec_addon()) {
+        al_show_native_message_box(NULL, "ACodec Error", "ERROR", "Could not initialize Allegro 5 ACODEC addon", NULL, 0);
+        return -1;
+    }
+
     return 0;
 }
 
@@ -124,19 +142,21 @@ void init_screen(ALLEGRO_DISPLAY *display, SCREEN *sc, ALLEGRO_COLOR *foreground
 
 
 
-PLAYER * new_player(int side, SCREEN *sc, ALLEGRO_COLOR *color) {
+PLAYER * new_player(int side, SCREEN *sc, ALLEGRO_COLOR *color, ALLEGRO_SAMPLE *sound) {
     PLAYER *p = malloc(sizeof(PLAYER));
     p->active = true;
     p->score = 0;
     sprintf(p->scorestr, "%i", p->score);
     p->side = side;
+    p->sound = sound;
+
     p->pad.thickness = sc->border;
     p->pad.position_y = sc->vcenter;
 
     if (p->side == LEFT) {
-        p->pad.position_x = 1.5 * sc->border;
+        p->pad.position_x = 2 * sc->border;
     } else if (p->side == RIGHT) {
-        p->pad.position_x = sc->width-1.5*sc->border;
+        p->pad.position_x = sc->width-2*sc->border;
     }
 
     p->pad.size = sc->height / 16;
@@ -144,6 +164,21 @@ PLAYER * new_player(int side, SCREEN *sc, ALLEGRO_COLOR *color) {
     p->pad.color = *color;
 
     return p;
+}
+
+void redraw_player(PLAYER *p, SCREEN *sc) {
+    p->pad.thickness = sc->border;
+    p->pad.position_y = sc->vcenter;
+
+    if (p->side == LEFT) {
+        p->pad.position_x = 2 * sc->border;
+    } else if (p->side == RIGHT) {
+        p->pad.position_x = sc->width-2*sc->border;
+    }
+
+    p->pad.size = sc->height / 16;
+    p->pad.speed = sc->height / 80;
+
 }
 
 
@@ -168,6 +203,20 @@ void init_ball(BALL *b, SCREEN *sc, ALLEGRO_COLOR *color) {
     b->size = sc->border;
     b->ingame = false;
     b->color = *color;
+}
+
+void reset_ball(BALL *b, SCREEN *sc) {
+    int dir_x = rand() % 2 ? 1:-1;
+    int dir_y = rand() % 2 ? 1:-1;
+
+    b->position_x = sc->hcenter;
+    b->position_y = sc->vcenter;
+    b->initial_speed_x = sc->width/160;
+    b->initial_speed_y = sc->height/120;
+    b->speed_x = b->initial_speed_x * dir_x;
+    b->speed_y = b->initial_speed_y * dir_y;;
+    b->size = sc->border;
+    b->ingame = false;
 }
 
 /* ********************************************************************** 
@@ -235,25 +284,38 @@ int norm(int x1, int y1, int x2, int y2) {
     return sqrt(pow((x1 - x2), 2) + pow((y1 - y2), 2));
 }
 
+bool box_collision(BALL *b, PLAYER *p) {
+    static int hyst = 0;
+
+    if( (b->position_y > p->pad.position_y - p->pad.size - b->size/2) &&
+            (b->position_y < p->pad.position_y + p->pad.size + b->size/2) &&
+            (b->position_x < p->pad.position_x + p->pad.thickness/2 + b->size/2) &&
+            (b->position_x > p->pad.position_x - p->pad.thickness/2 - b->size/2) &&
+            hyst > 20)
+    {
+        al_play_sample(p->sound, 1.0, 2*p->side-1, 1, ALLEGRO_PLAYMODE_ONCE, 0);
+        hyst = 0;
+        return true;
+    } else {
+        hyst++;
+        return false;
+    }
+}
+
 bool norm_collision(BALL *b, PLAYER *p) {
     float ball_radius;
     float dist;
+    static int hyst = 0;
 
     dist = norm(b->position_x, b->position_y, p->pad.position_x, p->pad.position_y);
-    ball_radius = b->size;
+    ball_radius = 2*b->size;
 
-    fprintf(stdout, "%2i b_pos %4i %4i p_pos %4i %4i size: %2i rad: %5.2f dist: %5.2f\n", 
-            p->side,
-            b->position_x, b->position_y, 
-            p->pad.position_x, p->pad.position_y,
-            b->size, ball_radius, dist);
-
-    if (dist <= ball_radius) {
-        fprintf(stdout, "Ball hit pad\n");
+    if (dist <= ball_radius && hyst > 10) {
+        hyst = 0;
         return true;
     }
-    else
-    {
+    else {
+        hyst++;
         return false;
     }
 }
@@ -276,19 +338,17 @@ bool wall_collision(BALL *b, SCREEN *sc) {
 
 
 void move_ball(BALL *b, PLAYER **p, SCREEN *sc) {
-    if (norm_collision(b, p[0]) || norm_collision(b, p[1])) {
-        fprintf(stdout, "inverting_x\n");
-        b->speed_x *= -1;
+    if (box_collision(b, p[0]) || box_collision(b, p[1])) {
+        b->speed_x *= -1; 
     }
 
-    // Coliding with the side bars
     if (wall_collision(b, sc)) {
-        fprintf(stdout, "inverting_y\n");
-        b->speed_y *= -1;
+        b->speed_y *= -1; 
     }
 
     b->position_x = b->position_x + b->speed_x;
     b->position_y = b->position_y + b->speed_y;
+
     sc->draw = true;
 }
 
@@ -327,7 +387,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    al_set_new_display_flags(ALLEGRO_WINDOWED);
+    al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_RESIZABLE);
     ALLEGRO_DISPLAY *display = al_create_display(SCREENWIDTH, SCREENHEIGHT);
 
     if(!display) {
@@ -341,8 +401,9 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
     const int FPS = 60;
     const double dt = 1.0/FPS;
-
-
+    
+    int64_t rt;
+    int mult;
     /* Game Standards */
     ALLEGRO_COLOR white  = al_map_rgb(255, 255, 255);
     ALLEGRO_COLOR grey70 = al_map_rgb(200, 200, 200);
@@ -355,6 +416,17 @@ int main(int argc, char *argv[]) {
     ALLEGRO_FONT *terminusbold = al_load_font("terminusbold.ttf", 80, 0);
 
     ALLEGRO_TIMER *timer       = al_create_timer(dt);
+    ALLEGRO_TIMER *roundtimer  = al_create_timer(dt);
+
+    al_reserve_samples(4);
+    ALLEGRO_SAMPLE *ping = al_load_sample("data/ping.wav");
+    ALLEGRO_SAMPLE *pong = al_load_sample("data/pong.wav");
+    ALLEGRO_SAMPLE *victory = al_load_sample("data/victory.wav");
+    ALLEGRO_SAMPLE *bgmusic = al_load_sample("data/bgmusic.ogg");
+
+    ALLEGRO_SAMPLE_INSTANCE *songInstance = al_create_sample_instance(bgmusic);
+    al_set_sample_instance_playmode(songInstance, ALLEGRO_PLAYMODE_LOOP);
+    al_attach_sample_instance_to_mixer(songInstance, al_get_default_mixer());
 
     ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
     al_register_event_source(event_queue, al_get_keyboard_event_source());
@@ -374,26 +446,28 @@ int main(int argc, char *argv[]) {
     init_ball(&ball, &sc, ball_color);
 
     /* The Players */
-    PLAYER *p1 = new_player(LEFT,  &sc, foreground);
-    PLAYER *p2 = new_player(RIGHT, &sc, foreground);
+    PLAYER *p1 = new_player(LEFT,  &sc, foreground, ping);
+    PLAYER *p2 = new_player(RIGHT, &sc, foreground, pong);
     PLAYER *players[2] = { p1, p2 };
 
     /* Loop status */
     bool done = false;
-
 
     /* **********************************************************************
      *
      * Main loop 
      *
      * **********************************************************************/
+    al_play_sample_instance(songInstance);
     al_start_timer(timer);
+
     while(!done) {
+
 
         if(!ball.ingame) 
             init_ball(&ball, &sc, ball_color);
 
-        if(sc.draw) {
+        if(sc.draw && al_is_event_queue_empty(event_queue)) {
             draw_arena(&sc);
             draw_scores(terminusbold, foreground, players, &sc);
             draw_pads(players);
@@ -404,13 +478,22 @@ int main(int argc, char *argv[]) {
 
         al_wait_for_event(event_queue, &events);
 
-        /* Window events
-         * TODO: ADD resizeability
-         */
+        /* Window events */
         if(events.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
         {
             done = true;
         }
+
+        if(events.type == ALLEGRO_EVENT_DISPLAY_RESIZE) {
+            al_acknowledge_resize(events.display.source);
+            init_screen(display, &sc, foreground, background);
+            draw_arena(&sc);
+            reset_ball(&ball, &sc);
+            redraw_player(p1, &sc);
+            redraw_player(p2, &sc);
+            al_flip_display();
+        }
+
 
         /* Input devices events */
         if(events.type == ALLEGRO_EVENT_KEY_UP)
@@ -421,6 +504,7 @@ int main(int argc, char *argv[]) {
                     done = true;
                     break;
                 case ALLEGRO_KEY_SPACE:
+                    al_start_timer(roundtimer);
                     ball.ingame = true;
                     break;
             }
@@ -449,15 +533,21 @@ int main(int argc, char *argv[]) {
         else if(al_key_down(&keystate, ALLEGRO_KEY_UP))
             move_pad(p2, UP, &sc);
 
-        /* Score Points */
 
+        /* Score Points */
         if(ball.position_x > sc.width) {
+            al_stop_timer(roundtimer);
+            al_set_timer_count(roundtimer, 0);
+            al_play_sample(victory, 1.0, 0, 1, ALLEGRO_PLAYMODE_ONCE, 0);
             score(p1);
             init_ball(&ball, &sc, ball_color);
             sc.draw = true;
         }
 
         if(ball.position_x < 0) {
+            al_stop_timer(roundtimer);
+            al_set_timer_count(roundtimer, 0);
+            al_play_sample(victory, 1.0, 0, 1, ALLEGRO_PLAYMODE_ONCE, 0);
             score(p2);
             init_ball(&ball, &sc, ball_color);
             sc.draw = true;
@@ -468,7 +558,12 @@ int main(int argc, char *argv[]) {
     /* GAME IS CLOSING, cleanup the house */
     destroy_players(players);
     al_clear_to_color(*background);
+    al_destroy_sample(ping);
+    al_destroy_sample(pong);
+    al_destroy_sample(victory);
+    al_destroy_sample(bgmusic);
     al_destroy_timer(timer);
+    al_destroy_timer(roundtimer);
     al_destroy_event_queue(event_queue);
     al_destroy_display(display);
 
