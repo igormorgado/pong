@@ -3,8 +3,7 @@ PONG
 
 Pong game
 
-![Screenshot]
-(https://github.com/igormorgado/pong/blob/master/pong.png)
+![Screenshot](https://github.com/igormorgado/pong/blob/master/pong.png)
 
 TO build:
 =========
