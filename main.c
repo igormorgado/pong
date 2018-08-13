@@ -445,6 +445,7 @@ int main(int argc, char *argv[]) {
      * Main loop 
      *
      * **********************************************************************/
+    al_get_system_config();
     al_play_sample_instance(songInstance);
     al_start_timer(timer);
 
@@ -556,4 +557,3 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-// vim:foldmethod=syntax:foldlevel=5
